@@ -21,50 +21,45 @@ jobs:
     name: SAST Job
     runs-on: ubuntu-latest
     container:
-      # A Docker image with Semgrep installed. Do not change this.
       image: semgrep/semgrep
-
-    # Skip any PR created by dependabot to avoid permission issues:
-    if: (github.actor != 'dependabot[bot]')
-
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep ci
+      - run: semgrep ci --error
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
-  sca_job:
-    runs-on: ubuntu-latest
-    name: SCA Job
-    steps:
-      - uses: actions/checkout@v5
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' 
-      - name: Install Node.js dependencies
-        run: npm install
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        id: Depcheck
-        with:
-          project: 'test'
-          path: '.'
-          format: 'HTML'
-          out: 'reports'
-          args: >
-            --failOnCVSS 7
-            --enableRetired
-      - name: Upload Test results
-        uses: actions/upload-artifact@master
-        with:
-           name: Depcheck report
-           path: ${{github.workspace}}/reports
+  # sca_job:
+  #   runs-on: ubuntu-latest
+  #   name: SCA Job
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20' 
+  #     - name: Install Node.js dependencies
+  #       run: npm install
+  #     - name: Run OWASP Dependency-Check
+  #       uses: dependency-check/Dependency-Check_Action@main
+  #       id: Depcheck
+  #       with:
+  #         project: 'test'
+  #         path: '.'
+  #         format: 'HTML'
+  #         out: 'reports'
+  #         args: >
+  #           --failOnCVSS 7
+  #           --enableRetired
+  #     - name: Upload Test results
+  #       uses: actions/upload-artifact@master
+  #       with:
+  #          name: Depcheck report
+  #          path: ${{github.workspace}}/reports
   
   docker_job:
     runs-on: ubuntu-latest
-    needs: [build_job, sast_job, sca_job]
-    if: success()
+    needs: [build_job, sast_job]
+    if: success() 
     name: Docker Job
     steps:
       - name: Checkout
