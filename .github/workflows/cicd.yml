@@ -3,10 +3,9 @@ name: Node.js CI
 on: [push]
 
 jobs:
-  build:
-    name: Build Project
+  build_job:
+    name: Build Job
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
       - name: Use Node.js
@@ -16,12 +15,11 @@ jobs:
       - run: npm ci
       - run: npm run build --if-present
   
-  sast:
+  sast_job:
     permissions:
       contents: read
-    name: Scan Code with Semgrep for SAST
+    name: SAST Job
     runs-on: ubuntu-latest
-
     container:
       # A Docker image with Semgrep installed. Do not change this.
       image: semgrep/semgrep
@@ -30,12 +28,34 @@ jobs:
     if: (github.actor != 'dependabot[bot]')
 
     steps:
-      # Fetch project source with GitHub Actions Checkout. Use either v3 or v4.
       - uses: actions/checkout@v4
-      # Run the "semgrep ci" command on the command line of the docker image.
       - run: semgrep ci
         env:
-          # Connect to Semgrep AppSec Platform through your SEMGREP_APP_TOKEN.
-          # Generate a token from Semgrep AppSec Platform > Settings
-          # and add it to your GitHub secrets.
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  sca_job:
+    runs-on: ubuntu-latest
+    name: SCA Job
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' 
+      - name: Install Node.js dependencies
+        run: npm install
+      - name: Depcheck
+        uses: dependency-check/Dependency-Check_Action@main
+        id: Depcheck
+        with:
+          project: 'test'
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+      - name: Upload Test results
+        uses: actions/upload-artifact@master
+        with:
+           name: Depcheck report
+           path: ${{github.workspace}}/reports
