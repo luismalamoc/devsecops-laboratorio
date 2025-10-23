@@ -16,8 +16,8 @@ jobs:
       - run: npm ci
       - run: npm run build --if-present
   
-  sast_job:
-    name: SAST Job
+  sast_scan_job:
+    name: SAST Scan Job
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -31,9 +31,9 @@ jobs:
       - name: Run Semgrep scan with auto-config and error on findings
         run: semgrep scan --config=auto --error
 
-  sca_job:
+  sca_scan_job:
     runs-on: ubuntu-24.04
-    name: SCA Job
+    name: SCA Scan Job
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
@@ -59,20 +59,20 @@ jobs:
            name: Depcheck report
            path: ${{github.workspace}}/reports
   
-  trivy_job:
+  image_security_job:
     runs-on: ubuntu-24.04
     needs: [build_job]
     if: success() 
-    name: Trivy Job
+    name: Image Security Job
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build an image from Dockerfile
-        run: docker build -t devsecops-laboratorio:${{ github.sha }} .
+        run: docker build -t $GITHUB_REPOSITORY:${{ github.sha }} .
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'devsecops-laboratorio:${{ github.sha }}'
+          image-ref: '$GITHUB_REPOSITORY:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
