@@ -7,7 +7,8 @@ jobs:
     name: Build Job
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -16,17 +17,19 @@ jobs:
       - run: npm run build --if-present
   
   sast_job:
-    permissions:
-      contents: read
     name: SAST Job
     runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
-      - run: semgrep ci --severity=HIGH --severity=ERROR
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Semgrep
+        run: pip install semgrep
+      - name: Run Semgrep scan with auto-config and error on findings
+        run: semgrep scan --config=auto --error
 
   # sca_job:
   #   runs-on: ubuntu-latest
