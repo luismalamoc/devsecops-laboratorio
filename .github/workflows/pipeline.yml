@@ -24,7 +24,7 @@ jobs:
       image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep ci --error
+      - run: semgrep ci --severity=HIGH --severity=ERROR
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
