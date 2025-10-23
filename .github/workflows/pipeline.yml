@@ -59,11 +59,11 @@ jobs:
            name: Depcheck report
            path: ${{github.workspace}}/reports
   
-  image_security_job:
+  docker_image_scan_job:
     runs-on: ubuntu-24.04
     needs: [build_job]
     if: success() 
-    name: Image Security Job
+    name: Docker Image Scan Job
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
