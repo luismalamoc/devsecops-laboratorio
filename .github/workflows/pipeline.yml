@@ -31,7 +31,7 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
       - name: Run Semgrep scan with auto-config and error on findings
-        run: semgrep scan --config=auto --error
+        run: semgrep scan --config=auto --severity=ERROR --severity=WARNING --error --verbose
 
   sca_scan_job:
     runs-on: ubuntu-24.04
@@ -52,11 +52,21 @@ jobs:
         with:
           project: 'test'
           path: '.'
-          format: 'HTML'
+          format: 'ALL'
           out: 'reports'
           args: >
-            --failOnCVSS 7
+            --failOnCVSS 4
             --enableRetired
+      - name: Display Dependency-Check Report
+        if: always()
+        run: |
+          echo "=== OWASP Dependency-Check Results ==="
+          if [ -f reports/dependency-check-report.json ]; then
+            cat reports/dependency-check-report.json
+          fi
+          if [ -f reports/dependency-check-report.xml ]; then
+            cat reports/dependency-check-report.xml
+          fi
   
   docker_image_scan_job:
     runs-on: ubuntu-24.04
@@ -76,11 +86,11 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
 
   docker_image_push_job:
     runs-on: ubuntu-24.04
-    needs: [build_job] #, sast_scan_job, sca_scan_job, docker_image_scan_job]
+    needs: [build_job, sast_scan_job, sca_scan_job, docker_image_scan_job]
     if: success() 
     name: Docker Image Push Job
     steps:
