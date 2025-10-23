@@ -19,6 +19,8 @@ jobs:
   sast_scan_job:
     name: SAST Scan Job
     runs-on: ubuntu-24.04
+    needs: [build_job]
+    if: success() 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -34,6 +36,8 @@ jobs:
   sca_scan_job:
     runs-on: ubuntu-24.04
     name: SCA Scan Job
+    needs: [build_job]
+    if: success() 
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
@@ -87,10 +91,10 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Build container image
-        run: docker build -t ${{ secrets.REGISTRY_NAME }}/${{ github.repository }}:$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t ${{ secrets.REGISTRY_NAME }}/${{ github.event.repository.name }}:$(echo $GITHUB_SHA | head -c7) .
 
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 1200
 
       - name: Push image to DigitalOcean Container Registry
-        run: docker push ${{ secrets.REGISTRY_NAME }}/${{ github.repository }}:$(echo $GITHUB_SHA | head -c7)
+        run: docker push ${{ secrets.REGISTRY_NAME }}/${{ github.event.repository.name }}:$(echo $GITHUB_SHA | head -c7)
