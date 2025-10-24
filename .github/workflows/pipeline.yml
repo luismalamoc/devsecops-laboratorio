@@ -37,35 +37,65 @@ jobs:
     runs-on: ubuntu-24.04
     name: SCA Scan Job
     needs: [build_job]
-    if: success() 
+    if: success()
+    timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
-      - name: Setup Node.js
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+      
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' 
-      - name: Install Node.js dependencies
-        run: npm install
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Cache Dependency-Check Data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/dependency-check-data
+          key: dependency-check-data-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            dependency-check-data-
+      
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         id: Depcheck
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         with:
-          project: 'test'
+          project: 'nextjs-app'
           path: '.'
           format: 'ALL'
           out: 'reports'
-          args: >
+          args: >-
             --failOnCVSS 4
             --enableRetired
-      - name: Display Dependency-Check Report
+            --enableExperimental
+            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+      
+      - name: Upload Dependency-Check Reports
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-reports
+          path: reports/
+          retention-days: 30
+      
+      - name: Validate CRITICAL, HIGH, or MEDIUM vulnerabilities in Dependency-Check report
         run: |
-          echo "=== OWASP Dependency-Check Results ==="
-          if [ -f reports/dependency-check-report.json ]; then
-            cat reports/dependency-check-report.json
-          fi
-          if [ -f reports/dependency-check-report.xml ]; then
-            cat reports/dependency-check-report.xml
+          if jq '.dependencies[].vulnerabilities[]? | select(.severity=="CRITICAL" or .severity=="HIGH" or .severity=="MEDIUM")' reports/dependency-check-report.json | grep .; then
+            echo "CRITICAL, HIGH, or MEDIUM vulnerabilities found in Dependency-Check report!"
+            exit 1
+          else
+            echo "No CRITICAL, HIGH, or MEDIUM vulnerabilities found in Dependency-Check report."
           fi
   
   docker_image_scan_job:
